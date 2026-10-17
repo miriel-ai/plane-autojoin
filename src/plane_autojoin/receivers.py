@@ -150,35 +150,43 @@ def join(user_id, cfg=None):
     landing = None
     for slug in cfg.workspace_slugs:
         try:
-            workspace = Workspace.objects.filter(slug=slug).first()
-            if workspace is None:
-                logger.error("auto-join: workspace %s not found; user %s not joined to it", slug, user_id)
-                continue
-            _, created = WorkspaceMember.objects.get_or_create(
-                workspace=workspace, member_id=user_id, defaults={"role": cfg.role}
-            )
-            # The membership exists from here on: it is the landing workspace
-            # even if clearing the cache below fails.
-            if landing is None:
-                landing = workspace.id
-            if created:
-                logger.info("auto-join: user %s joined %s as role %s", user_id, workspace.slug, cfg.role)
-                try:
-                    # As workspace_project_join.py does after adding members.
-                    invalidate_cache_directly(
-                        path=f"/api/workspaces/{workspace.slug}/members/", url_params=False, user=False, multiple=True
-                    )
-                except Exception as e:
-                    logger.error("auto-join: members cache of %s not cleared (%s)", workspace.slug, type(e).__name__)
+            # A savepoint per workspace, so one failure cannot leave the
+            # connection unusable for the next (join() normally runs in
+            # autocommit, from on_commit).
+            with transaction.atomic():
+                workspace = Workspace.objects.filter(slug=slug).first()
+                if workspace is None:
+                    logger.error("auto-join: workspace %s not found; user %s not joined to it", slug, user_id)
+                    continue
+                _, created = WorkspaceMember.objects.get_or_create(
+                    workspace=workspace, member_id=user_id, defaults={"role": cfg.role}
+                )
         except Exception as e:
             logger.error("auto-join: user %s not joined to %s (%s)", user_id, slug, type(e).__name__)
+            continue
+
+        # The membership exists from here on: it is the landing workspace
+        # even if clearing the cache below fails.
+        if landing is None:
+            landing = workspace.id
+        if created:
+            logger.info("auto-join: user %s joined %s as role %s", user_id, workspace.slug, cfg.role)
+            try:
+                # As workspace_project_join.py does after adding members.
+                invalidate_cache_directly(
+                    path=f"/api/workspaces/{workspace.slug}/members/", url_params=False, user=False, multiple=True
+                )
+            except Exception as e:
+                logger.error("auto-join: members cache of %s not cleared (%s)", workspace.slug, type(e).__name__)
 
     if landing is None:
         return
     try:
-        profile = Profile.objects.filter(user_id=user_id).first()
-        if profile is not None:
-            point_profile(profile, landing)
+        # See on_profile_saved.
+        with transaction.atomic():
+            profile = Profile.objects.filter(user_id=user_id).first()
+            if profile is not None:
+                point_profile(profile, landing)
     except Exception as e:
         logger.error("auto-join: profile of user %s not updated (%s)", user_id, type(e).__name__)
 
@@ -190,14 +198,18 @@ def on_profile_saved(sender, instance, created, raw=False, **kwargs):
     try:
         from plane.db.models import WorkspaceMember
 
-        joined = dict(
-            WorkspaceMember.objects.filter(
-                workspace__slug__in=cfg.workspace_slugs, member_id=instance.user_id, is_active=True
-            ).values_list("workspace__slug", "workspace_id")
-        )
-        landing = next((joined[s] for s in cfg.workspace_slugs if s in joined), None)
-        if landing is not None:
-            point_profile(instance, landing)
+        # A savepoint: this runs inside Plane's own transaction when there is
+        # one, and a database error caught without it would leave that
+        # transaction unusable for the rest of the sign-up.
+        with transaction.atomic():
+            joined = dict(
+                WorkspaceMember.objects.filter(
+                    workspace__slug__in=cfg.workspace_slugs, member_id=instance.user_id, is_active=True
+                ).values_list("workspace__slug", "workspace_id")
+            )
+            landing = next((joined[s] for s in cfg.workspace_slugs if s in joined), None)
+            if landing is not None:
+                point_profile(instance, landing)
     except Exception as e:
         logger.error("auto-join: profile of user %s not updated (%s)", instance.user_id, type(e).__name__)
 

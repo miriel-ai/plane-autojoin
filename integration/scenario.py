@@ -8,6 +8,7 @@ import sys
 import uuid
 
 from django.apps import apps
+from django.db import connection, transaction
 from django.test import RequestFactory
 from plane.authentication.adapter.base import Adapter
 from plane.db.models import Profile, User, UserNotificationPreference, Workspace, WorkspaceMember
@@ -84,6 +85,30 @@ if SCENARIO == "domains":
     receivers.join(alice.pk)
     receivers.join(alice.pk)
     joined(alice, ws)
+
+    # A database error inside the profile receiver, under an outer
+    # transaction: PostgreSQL aborts the transaction unless the receiver
+    # used a savepoint, and the rest of Plane's sign-up would then fail.
+    real_filter = WorkspaceMember.objects.filter
+
+    def failing_filter(*args, **kwargs):
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1/0")
+        return real_filter(*args, **kwargs)
+
+    try:
+        with transaction.atomic():
+            WorkspaceMember.objects.filter = failing_filter
+            try:
+                dan = sign_up("dan@example.com")
+            finally:
+                WorkspaceMember.objects.filter = real_filter
+            # Still usable: a query in the same transaction works.
+            check(User.objects.filter(pk=dan.pk).exists(), "outer transaction usable after a receiver error")
+        # Committed: the deferred join ran and set the profile itself.
+        joined(dan, ws)
+    except Exception as e:
+        check(False, f"sign-up under an outer transaction survived a receiver error ({type(e).__name__})")
 
 elif SCENARIO == "trust_all":
     check(receivers.CONFIG is not None and receivers.CONFIG.trust_all_verified, "trust-all mode is on")
