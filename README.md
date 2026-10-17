@@ -223,9 +223,9 @@ test, and re-read the files named at the top of
 
 ## Upstream
 
-We have proposed domain auto-join to Plane upstream, as a setting in the
-sign-up path itself. If Plane ships it, prefer the built-in feature and
-drop this app.
+We intend to propose domain auto-join to Plane upstream, as a setting in
+the sign-up path itself; it has not been submitted yet. If Plane ships it,
+prefer the built-in feature and drop this app.
 
 ## Development
 
