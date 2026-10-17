@@ -1,0 +1,48 @@
+# Plane CE's real backend image with plane_autojoin mounted the way a
+# deployment mounts it, against a throwaway Postgres and Valkey. Driven by
+# run.sh; nothing here is persistent.
+name: plane-autojoin-it
+
+services:
+  db:
+    image: postgres:15.7-alpine@sha256:468d34fefd6338031787c7b8e94078975b3aaf4d66c7ead25c39cd3ba46a15c6
+    environment:
+      POSTGRES_USER: plane
+      POSTGRES_PASSWORD: plane
+      POSTGRES_DB: plane
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "plane", "-d", "plane"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: valkey/valkey:7.2.11-alpine@sha256:10328d00120dc14fbc87b2ed61b7677ddbb0d011e705361b4788329a0ec69a93
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    # Keep in step with the "Tested with" list in README.md. Tag plus index
+    # digest, so a re-pushed tag cannot change what is tested.
+    image: makeplane/plane-backend:v1.4.2@sha256:90032ce088708889b60c00d491897916f4deb882facda27db59fd10fb68729ef
+    environment:
+      DJANGO_SETTINGS_MODULE: plane.settings.autojoin_it
+      SECRET_KEY: integration-tests-only-not-a-secret-0123456789abcdefghijklmnop
+      DATABASE_URL: postgresql://plane:plane@db:5432/plane
+      REDIS_URL: redis://redis:6379/
+      DEBUG: "0"
+      # Each scenario sets PLANE_AUTOJOIN_* and the sign-in settings itself
+      # (run.sh, docker compose run -e).
+    volumes:
+      - ./settings.py:/code/plane/settings/autojoin_it.py:ro
+      - ../src/plane_autojoin:/code/plane_autojoin:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

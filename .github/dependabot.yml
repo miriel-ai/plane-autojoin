@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Pinned to the Django that the tested Plane release ships; bump it
+      # together with the Plane image in integration/compose.yml.
+      - dependency-name: django
+  - package-ecosystem: docker-compose
+    directory: /integration
+    schedule:
+      interval: weekly
+    ignore:
+      # Plane is bumped deliberately, with the compatibility list in README.md.
+      - dependency-name: makeplane/plane-backend
