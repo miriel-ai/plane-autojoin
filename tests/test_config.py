@@ -97,3 +97,8 @@ def test_allows_any_domain_in_trust_all():
     assert cfg.allows("a@gmail.example")
     assert not cfg.allows("no-at-sign")
     assert not cfg.allows("a@")
+
+
+def test_slug_case_is_kept():
+    # Plane accepts upper-case slugs and matches them exactly.
+    assert load(env(workspace_slug="Acme", email_domains="example.com")).workspace_slugs == ("Acme",)

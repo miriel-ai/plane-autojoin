@@ -68,7 +68,9 @@ def _split(value):
 def load(environ):
     """Return a Config, or None when auto-join is not configured (no slug).
     Raise ConfigError when it is configured but invalid."""
-    slugs = tuple(s.lower() for s in _split(environ.get(WORKSPACE_SLUG)))
+    # Kept as given: Plane's slugs may contain upper-case letters and are
+    # matched exactly.
+    slugs = tuple(_split(environ.get(WORKSPACE_SLUG)))
     if not slugs:
         return None
 

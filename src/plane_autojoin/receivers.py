@@ -157,14 +157,19 @@ def join(user_id, cfg=None):
             _, created = WorkspaceMember.objects.get_or_create(
                 workspace=workspace, member_id=user_id, defaults={"role": cfg.role}
             )
-            if created:
-                # As workspace_project_join.py does after adding members.
-                invalidate_cache_directly(
-                    path=f"/api/workspaces/{workspace.slug}/members/", url_params=False, user=False, multiple=True
-                )
-                logger.info("auto-join: user %s joined %s as role %s", user_id, workspace.slug, cfg.role)
+            # The membership exists from here on: it is the landing workspace
+            # even if clearing the cache below fails.
             if landing is None:
                 landing = workspace.id
+            if created:
+                logger.info("auto-join: user %s joined %s as role %s", user_id, workspace.slug, cfg.role)
+                try:
+                    # As workspace_project_join.py does after adding members.
+                    invalidate_cache_directly(
+                        path=f"/api/workspaces/{workspace.slug}/members/", url_params=False, user=False, multiple=True
+                    )
+                except Exception as e:
+                    logger.error("auto-join: members cache of %s not cleared (%s)", workspace.slug, type(e).__name__)
         except Exception as e:
             logger.error("auto-join: user %s not joined to %s (%s)", user_id, slug, type(e).__name__)
 

@@ -256,3 +256,39 @@ def test_trust_all_logs_a_warning(autojoin, caplog):
     with caplog.at_level(logging.INFO, logger="plane_autojoin"):
         autojoin(workspace_slug="acme", trust_all_verified_emails="true")
     assert any(r.levelno == logging.WARNING and "TRUST_ALL_VERIFIED_EMAILS is on" in r.message for r in caplog.records)
+
+
+@autocommit
+def test_mixed_case_slug_matches_exactly(autojoin, db):
+    upper = Workspace.objects.create(slug="Acme")
+    Workspace.objects.create(slug="acme")
+    autojoin(workspace_slug="Acme", email_domains="example.com")
+    user, profile = sign_up("new@example.com")
+    assert members(user) == [("Acme", 15, True)]
+    profile.refresh_from_db()
+    assert profile.last_workspace_id == upper.id
+
+
+@pytest.mark.django_db
+def test_cache_failure_still_updates_profile_after_commit(
+    autojoin, db, monkeypatch, caplog, django_capture_on_commit_callbacks
+):
+    # Outer transaction: the Profile exists when the join runs, so the join
+    # must update it itself even if clearing the cache fails.
+    first = Workspace.objects.create(slug="first")
+    Workspace.objects.create(slug="second")
+    autojoin(workspace_slug="first,second", email_domains="example.com")
+
+    def boom(**kw):
+        raise RuntimeError("cache down")
+
+    monkeypatch.setattr(cache, "invalidate_cache_directly", boom)
+    with caplog.at_level(logging.INFO, logger="plane_autojoin"):
+        with django_capture_on_commit_callbacks(execute=True):
+            with transaction.atomic():
+                user, profile = sign_up("new@example.com")
+    assert sorted(members(user)) == [("first", 15, True), ("second", 15, True)]
+    profile.refresh_from_db()
+    assert profile.last_workspace_id == first.id
+    assert profile.onboarding_step["workspace_join"] is True
+    assert "members cache of first not cleared (RuntimeError)" in caplog.text
