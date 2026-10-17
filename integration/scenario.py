@@ -1,8 +1,8 @@
 # Fed to `python manage.py shell` inside Plane's backend image by run.sh.
 # Users are created through Plane's own sign-up code
 # (Adapter.complete_login_or_signup), so the same code path and signals run
-# as for a real OAuth, magic-code or password sign-up. Exits non-zero on the
-# first failed check.
+# as for a real OAuth, magic-code or password sign-up. Runs every check and
+# exits non-zero if any failed.
 import os
 import sys
 import uuid
