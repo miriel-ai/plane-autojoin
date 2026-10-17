@@ -120,7 +120,7 @@ All variables are read once, at start-up.
 
 | Variable | Meaning |
 | --- | --- |
-| `PLANE_AUTOJOIN_WORKSPACE_SLUG` | The workspace to join. Several, comma-separated, joins all of them with the same role; the first one that exists becomes the landing workspace. **Unset: the app does nothing.** |
+| `PLANE_AUTOJOIN_WORKSPACE_SLUG` | The workspace to join. Several, comma-separated, joins all of them with the same role, and the profile's `last_workspace_id` starts at the first one that exists. Plane's web onboarding then sets it to whichever workspace Plane lists first, so with several workspaces the user may finish onboarding in a different one. **Unset: the app does nothing.** |
 | `PLANE_AUTOJOIN_EMAIL_DOMAINS` | Comma-separated email domains, exact match: `example.com` admits `a@example.com`, not `a@sub.example.com`. No wildcards. |
 | `PLANE_AUTOJOIN_TRUST_ALL_VERIFIED_EMAILS` | `true` to admit every verified email, whatever the domain. Off by default. Read [Trusting every verified email](#trusting-every-verified-email) first. |
 | `PLANE_AUTOJOIN_ROLE` | `member` (or `15`, the default) or `guest` (or `5`). Admin (`20`) is refused. |

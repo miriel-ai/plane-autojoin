@@ -1,9 +1,10 @@
 """Configuration from the environment, read once at start-up.
 
 PLANE_AUTOJOIN_WORKSPACE_SLUG
-    The workspace to join, or several, comma-separated. The first one
-    that exists becomes the user's landing workspace. Unset: the app
-    does nothing.
+    The workspace to join, or several, comma-separated. The profile's
+    last_workspace_id starts at the first one that exists; Plane's web
+    onboarding may later move it to whichever workspace it lists first.
+    Unset: the app does nothing.
 PLANE_AUTOJOIN_EMAIL_DOMAINS
     Comma-separated email domains, exact match (no subdomains).
 PLANE_AUTOJOIN_TRUST_ALL_VERIFIED_EMAILS
