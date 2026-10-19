@@ -1,0 +1,51 @@
+[project]
+name = "plane-autojoin"
+version = "0.1.0"
+description = "Auto-join a workspace by verified email domain for self-hosted Plane Community Edition"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Miriel" }]
+# Plane v1.4.2's backend image runs Python 3.12.
+requires-python = ">=3.12"
+# None at run time: Django and Plane come from Plane's backend image.
+dependencies = []
+classifiers = [
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/miriel-ai/plane-autojoin"
+Issues = "https://github.com/miriel-ai/plane-autojoin/issues"
+
+[dependency-groups]
+dev = [
+    # The Django that Plane v1.4.2 ships (apps/api/requirements/base.txt).
+    "django==5.2.15",
+    "pytest>=8",
+    "pytest-django>=4.9",
+    "ruff>=0.14",
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.13"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = [".", "src", "tests/fakeplane"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["plane_autojoin"]
+known-third-party = ["plane"]
