@@ -5,7 +5,7 @@ name: plane-autojoin-it
 
 services:
   db:
-    image: postgres:15.7-alpine@sha256:468d34fefd6338031787c7b8e94078975b3aaf4d66c7ead25c39cd3ba46a15c6
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     environment:
       POSTGRES_USER: plane
       POSTGRES_PASSWORD: plane
