@@ -23,8 +23,9 @@ Issues = "https://github.com/miriel-ai/plane-autojoin/issues"
 
 [dependency-groups]
 dev = [
-    # The Django that Plane v1.4.2 ships (apps/api/requirements/base.txt).
-    "django==5.2.15",
+    # Plane v1.4.2 ships 5.2.15 (apps/api/requirements/base.txt); we pin the
+    # latest 5.2.x patch for its security fixes (Dependabot alerts #1-#5).
+    "django==5.2.19",
     "pytest>=8",
     "pytest-django>=4.9",
     "ruff>=0.14",
