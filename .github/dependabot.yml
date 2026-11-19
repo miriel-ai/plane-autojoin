@@ -1,13 +1,26 @@
+# Minor and patch version updates are grouped per ecosystem so the weekly PR
+# count stays small; majors and security updates stay ungrouped (groups below
+# apply to version updates only), so each arrives as its own PR. Database
+# images are kept out of the group and their majors are ignored, so a database
+# upgrade is always a deliberate, standalone change (MIR-1823).
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
   - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
+    groups:
+      python-minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
     ignore:
       # Pinned to the Django that the tested Plane release ships; bump it
       # together with the Plane image in integration/compose.yml.
@@ -16,6 +29,23 @@ updates:
     directory: /integration
     schedule:
       interval: weekly
+    groups:
+      compose-minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+        # Database images stay out of the group so each of their bumps is a
+        # standalone PR. (Dependabot allows only one entry per ecosystem and
+        # directory, so the carve-out lives here rather than in an entry of
+        # its own.)
+        exclude-patterns:
+          - postgres
+          - valkey/valkey
     ignore:
       # Plane is bumped deliberately, with the compatibility list in README.md.
       - dependency-name: makeplane/plane-backend
+      # Database-image majors are never proposed; a major database upgrade is
+      # a deliberate, by-hand change (MIR-1823).
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+      - dependency-name: valkey/valkey
+        update-types: ["version-update:semver-major"]
